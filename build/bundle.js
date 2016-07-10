@@ -76,7 +76,7 @@ module.exports =
       req.webtaskContext.storage.get(function (err, data) {
         if (err && err.output.statusCode !== 404) return res.status(err.code).send(err);
  
-        var startCheckpointId = typeof data === 'undefined' ? null : data.checkpointId;
+        var startCheckpointId = null; //typeof data === 'undefined' ? null : data.checkpointId;
  
         // Start the process.
         async.waterfall([function (callback) {
@@ -109,49 +109,71 @@ module.exports =
  
           getLogs({ checkpointId: startCheckpointId });
         }, function (context, callback) {
+          
           var endpoints_filter = ctx.data.AUTH0_API_ENDPOINTS.split(',');
+          
           var request_matches_filter = function request_matches_filter(log) {
+            
             if (!endpoints_filter || !endpoints_filter.length) return true;
+            
             return log.details.request && log.details.request.path && endpoints_filter.some(function (f) {
               return log.details.request.path === '/api/v2/' + f || log.details.request.path.indexOf('/api/v2/' + f + '/') >= 0;
             });
+            
           };
-                   
+              
+          var USER_API_URL = "/api/v2/users/";
+          
           /******************************/
-          var getUsername = function log_converter(l) {
-              try {
-                  return l.response.body.user_metadata.userId;
-              } catch(e) {
-                  console.log("Something went wrong", e)
+          var user_update_log = function only_user_update_filter(l) {
+              
+              var request = l.details.request;
+              
+              if(!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
+                  return false;
+              }
+
+              var userUrl = request.path;        
+              return decodeURI(userUrl.replace(USER_API_URL, ""));
+          };
+          
+          var user_delete_log = function only_user_update_filter(l) {
+              
+              var request = l.details.request;
+              
+              if(!request || request.method != "delete" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
+                  return false;
+              }
+              
+              var userUrl = request.path;        
+              return decodeURI(userUrl.replace(USER_API_URL, ""));
+          };
+          
+          var user_success_login_log = function only_user_update_filter(l) {
+              
+              if(l.details.request.type != "ss") {
                   return;
               }
-          };
- 
-          var only_user_update_filter = function only_user_update_filter(l) {
-              return l.details.request.method == "patch" && l.details.response && l.details.response.body && l.details.response.statusCode == 200;
+  
+              return l.details.request.user_id;
           };
           
-          var only_user_with_username_filter = function only_user_with_username_filter(l) {
-              return !getUsername(l);
-          };
           /******************************/
-          
 
-          
           context.logs = context.logs.filter(function (l) {
-            return l.type === 'sapi' || l.type === 'fapi';
+              return l.type === 'sapi' || l.type === 'fapi';
+            })
+          .filter(function(l) {
+              return user_update_log(l) || user_success_login_log(l) || user_delete_log(l);
           })
-          .filter(request_matches_filter)
-          /******************************/
-          .filter(only_user_update_filter)
-          .filter(only_user_with_username_filter)
-          /******************************/
           .map(function (l) {
+            var userUpdateId = user_update_log(l) || user_success_login_log(l);
+            var userDeleteId = user_delete_log(l);
+            
             return {
               date: l.date,
-              username: getUsername(l),
-              request: l.details.request,
-              response: l.details.response
+              type: userDeleteId ? "delete" : "update",
+              userId: userDeleteId || userUpdateId 
             };
           });
           
@@ -175,17 +197,43 @@ module.exports =
            
           /******************************/
           var log_converter = function log_converter(l) {
-              var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
-              return {'token' : jwt.sign(l.response.body, secret)};
+              console.log("log:", l)
+                                
+              // console.log("request:", l.request)
+              return l.userId;
+              
+              // var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+              // return {'token' : jwt.sign(l.response.body, secret)};
           };
           /******************************/
+
+          // Grouped by userId
+          var logs = context.logs.reduce(function(acc, item) {  
+              var key = item.userId;
+              acc[key] = acc[key] || [];
+              acc[key].push(item);
+              return acc;
+            }, {});
           
+          Object.keys(logs).forEach(function(userId) {
+              
+           // Grouped by action and remove duplications  
+            logs[userId] = logs[userId].reduce(function(acc, item) {  
+                var key = item.type;
+                
+                if(!acc[key] || acc[key].date < item.date) {
+                    acc[key] = item.date;  
+                } 
+                
+                return acc;
+              }, {});
+
+          })
           
-          
-          async.eachLimit(context.logs, concurrent_calls, function (log, cb) {
-            
-            console.log("Update / Create user profile for ", log.username); 
-            
+          console.log("Group", logs);
+
+          async.eachLimit([], concurrent_calls, function (log, cb) {
+                        
             request.post(url)
                  
                 /******************************/
