@@ -1,3 +1,4 @@
+/******* oie-auth0-user-update-webhook *******/
 module.exports =
 /******/ (function(modules) { // webpackBootstrap
 /******/    // The module cache
@@ -76,7 +77,7 @@ module.exports =
       req.webtaskContext.storage.get(function (err, data) {
         if (err && err.output.statusCode !== 404) return res.status(err.code).send(err);
  
-        var startCheckpointId = null; //typeof data === 'undefined' ? null : data.checkpointId;
+        var startCheckpointId = typeof data === 'undefined' ? null : data.checkpointId;
  
         // Start the process.
         async.waterfall([function (callback) {
@@ -149,7 +150,7 @@ module.exports =
               return decodeURI(userUrl.replace(USER_API_URL, ""));
           };
           
-          var user_success_login_log = function only_user_update_filter(l) {
+          var user_success_signup_log = function only_user_update_filter(l) {
               
               if(l.details.request.type != "ss") {
                   return;
@@ -164,10 +165,10 @@ module.exports =
               return l.type === 'sapi' || l.type === 'fapi';
             })
           .filter(function(l) {
-              return user_update_log(l) || user_success_login_log(l) || user_delete_log(l);
+              return user_update_log(l) || user_success_signup_log(l) || user_delete_log(l);
           })
           .map(function (l) {
-            var userUpdateId = user_update_log(l) || user_success_login_log(l);
+            var userUpdateId = user_update_log(l) || user_success_signup_log(l);
             var userDeleteId = user_delete_log(l);
             
             return {
@@ -190,23 +191,6 @@ module.exports =
             return callback(null, context);
           }
  
-          var url = ctx.data.WEBHOOK_URL;
-          var concurrent_calls = ctx.data.WEBHOOK_CONCURRENT_CALLS || 5;
- 
-          console.log('Sending to \'' + url + '\' with ' + concurrent_calls + ' concurrent calls.');
-           
-          /******************************/
-          var log_converter = function log_converter(l) {
-              console.log("log:", l)
-                                
-              // console.log("request:", l.request)
-              return l.userId;
-              
-              // var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
-              // return {'token' : jwt.sign(l.response.body, secret)};
-          };
-          /******************************/
-
           // Grouped by userId
           var logs = context.logs.reduce(function(acc, item) {  
               var key = item.userId;
@@ -230,31 +214,31 @@ module.exports =
 
           })
           
-          console.log("Group", logs);
-
-          async.eachLimit([], concurrent_calls, function (log, cb) {
-                        
-            request.post(url)
-                 
-                /******************************/
-                .type('form')
-                .send(log_converter(log))
-                /******************************/
-                
-                .end(function (err, res) {
-                      if (err) {
-                        console.log('Error sending request:', err);
-                        return cb(err);
-                      }
-         
-                      if (!res.ok) {
-                        console.log('Unexpected response while sending request:', JSON.stringify(res.body));
-                        return cb(new Error('Unexpected response from webhook.'));
-                      }
-     
-                  cb();
-                });
+          console.log("Logs:", logs);
+          
+          var concurrent_calls = ctx.data.WEBHOOK_CONCURRENT_CALLS || 5;
+ 
+          async.eachLimit(Object.keys(logs), concurrent_calls, function (userId, cb) {
             
+            console.log("Log:", logs[userId]);
+            
+            var deleteActionDate = logs[userId]["delete"];
+            var updateActionDate = logs[userId]["update"];
+           
+            if(updateActionDate && !deleteActionDate) {
+                console.log("User(" + userId + ") profile is updated")
+                updateOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+            } else if(!updateActionDate && deleteActionDate) {
+                console.log("User(" + userId + ") profile is removed")
+                deleteOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+            } else if(updateActionDate > deleteActionDate) {
+                console.log("User(" + userId + ") profile is removed, but signed up again")
+                updateOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+            } else if(updateActionDate < deleteActionDate) {
+                console.log("User(" + userId + ") profile is updated, but also removed")
+                deleteOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+            }
+
           }, function (err) {
             if (err) {
               return callback(err);
@@ -296,6 +280,76 @@ module.exports =
       });
     }
  
+    function updateOIEUserData(req, userId, ctx, cb) {
+        
+        var url = ctx.data.WEBHOOK_URL;
+        
+        console.log('Sending to \'' + url + '\'');
+        
+        var log_converter = function log_converter(userResponse) {
+            console.log("Create signed data for user(" + userResponse.user_metadata.userId + "), auth0 userId: " + userResponse.user_id)
+            var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+            return {'token' : jwt.sign(userResponse, secret)};
+        };
+        
+        getUserDataFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.access_token, userId, function (userResponse, err) {
+            if (err) {
+              console.log('Error getting user data from Auth0', err);
+              return callback(err);
+            }
+            
+            request.post(url)
+            .type('form')
+            .send(log_converter(userResponse))
+            .end(function (err, res) {
+                  if (err) {
+                    console.log('Error sending request:', err);
+                    return cb(err);
+                  }
+     
+                  if (!res.ok) {
+                    console.log('Unexpected response while sending request:', JSON.stringify(res.body));
+                    return cb(new Error('Unexpected response from webhook.'));
+                  }
+ 
+              cb();
+            });
+
+          });
+        
+    }
+    
+    function deleteOIEUserData(req, userId, ctx, cb) {
+        
+        var url = ctx.data.WEBHOOK_URL;
+        
+        console.log('Sending to \'' + url + '\'');
+        
+        var log_converter = function log_converter(userId) {
+            console.log("Create delete signed data for user(" + userId + ")");
+            var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+            return {'token' : jwt.sign(userId, secret)};
+        };
+        
+        request.post(url)
+        .type('form')
+        .send(log_converter(userId))
+        .end(function (err, res) {
+              if (err) {
+                console.log('Error sending request:', err);
+                return cb(err);
+              }
+ 
+              if (!res.ok) {
+                console.log('Unexpected response while sending request:', JSON.stringify(res.body));
+                return cb(new Error('Unexpected response from webhook.'));
+                  }
+ 
+              cb();
+         });
+
+    };
+    
     function getLogsFromAuth0(domain, token, take, from, cb) {
       var url = 'https://' + domain + '/api/v2/logs';
  
@@ -312,6 +366,19 @@ module.exports =
       });
     }
  
+    function getUserDataFromAuth0(domain, token, userId, cb) {
+        var url = 'https://' + domain + '/api/v2/users/' + encodeURI(userId);
+  
+        Request.get(url).set('Authorization', 'Bearer ' + token).set('Accept', 'application/json').end(function (err, res) {
+          if (err || !res.ok) {
+            console.log('Error getting logs', err);
+            cb(null, err);
+          } else {
+            cb(res.body);
+          }
+        });
+      }
+    
     var getTokenCached = memoizer({
       load: function load(apiUrl, audience, clientId, clientSecret, cb) {
         Request.post(apiUrl).send({
