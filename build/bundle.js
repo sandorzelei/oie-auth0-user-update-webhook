@@ -63,7 +63,7 @@ module.exports =
      
     function lastLogCheckpoint(req, res) {
       var ctx = req.webtaskContext;
-      var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'WEBHOOK_URL'];
+      var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'WEBHOOK_URL'];
       var missing_settings = required_settings.filter(function (setting) {
         return !ctx.data[setting];
       });
@@ -90,7 +90,7 @@ module.exports =
  
             context.logs = context.logs || [];
  
-            getLogsFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.access_token, take, context.checkpointId, function (logs, err) {
+            getLogsFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.webtaskContext.data.AUTH0_APP_CLIENT_ID, req.access_token, take, context.checkpointId, function (logs, err) {
               if (err) {
                 console.log('Error getting logs from Auth0', err);
                 return callback(err);
@@ -111,7 +111,7 @@ module.exports =
           getLogs({ checkpointId: startCheckpointId });
         }, function (context, callback) {
           
-          var endpoints_filter = ctx.data.AUTH0_API_ENDPOINTS.split(',');
+          var endpoints_filter = ctx.data.AUTH0_API_ENDPOINTS ? ctx.data.AUTH0_API_ENDPOINTS.split(',') : "users";
           
           var request_matches_filter = function request_matches_filter(log) {
             
@@ -350,10 +350,17 @@ module.exports =
 
     };
     
-    function getLogsFromAuth0(domain, token, take, from, cb) {
+    function getLogsFromAuth0(domain, client_id, token, take, from, cb) {
       var url = 'https://' + domain + '/api/v2/logs';
  
-      Request.get(url).set('Authorization', 'Bearer ' + token).set('Accept', 'application/json').query({ take: take }).query({ from: from }).query({ sort: 'date:1' }).query({ per_page: take }).end(function (err, res) {
+      Request.get(url).set('Authorization', 'Bearer ' + token)
+          .set('Accept', 'application/json')
+          .query({ q: "client_id=" + client_id })
+          .query({ take: take })
+          .query({ from: from })
+          .query({ sort: 'date:1' })
+          .query({ per_page: take })
+          .end(function (err, res) {
         if (err || !res.ok) {
           console.log('Error getting logs', err);
           cb(null, err);
