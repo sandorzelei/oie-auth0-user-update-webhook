@@ -328,7 +328,7 @@ module.exports =
         var log_converter = function log_converter(userId) {
             console.log("Create delete signed data for user(" + userId + ")");
             var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
-            return {'token' : jwt.sign(userId, secret)};
+            return {'token' : jwt.sign({"userId" : userId}, secret)};
         };
         
         request.post(url)
