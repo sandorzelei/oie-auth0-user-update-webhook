@@ -56,11 +56,12 @@ module.exports =
     var app = express();
     var Request = __webpack_require__(2);
     var memoizer = __webpack_require__(8);
-     
+    
     /******************************/
     var jwt = __webpack_require__(13);
+    var metadata = __webpack_require__(14);
     /******************************/
-     
+    
     function lastLogCheckpoint(req, res) {
       var ctx = req.webtaskContext;
       var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'UPDATE_USER_WEBHOOK_URL', 'DELETE_USER_WEBHOOK_URL'];
@@ -302,17 +303,12 @@ module.exports =
             .type('form')
             .send(log_converter(userResponse))
             .end(function (err, res) {
-                  if (err) {
-                    console.log('Error sending request:', err);
+                if (err && !res.ok && res.status != 404) {
+                    console.log('Error sending request:', err, JSON.stringify(res.body));
                     return cb(err);
-                  }
-     
-                  if (!res.ok) {
-                    console.log('Unexpected response while sending request:', JSON.stringify(res.body));
-                    return cb(new Error('Unexpected response from webhook.'));
-                  }
- 
-              cb();
+                }
+                  
+                return cb();
             });
 
           });
@@ -335,17 +331,12 @@ module.exports =
         .type('form')
         .send(log_converter(userId))
         .end(function (err, res) {
-              if (err) {
-                console.log('Error sending request:', err);
+            if (err && !res.ok && res.status != 404) {
+                console.log('Error sending request:', err, JSON.stringify(res.body));
                 return cb(err);
-              }
- 
-              if (!res.ok) {
-                console.log('Unexpected response while sending request:', JSON.stringify(res.body));
-                return cb(new Error('Unexpected response from webhook.'));
-                  }
- 
-              cb();
+            }
+              
+            return cb();
          });
 
     };
@@ -428,6 +419,10 @@ module.exports =
     app.get('/', lastLogCheckpoint);
     app.post('/', lastLogCheckpoint);
  
+    app.get('/meta', function (req, res) {
+        res.status(200).send(metadata);
+    });
+    
     module.exports = Webtask.fromExpress(app);
  
 /***/ },
@@ -896,5 +891,59 @@ module.exports =
     module.exports = require('jsonwebtoken');
     /******************************/
  
+/***/ },
+/* 14 */
+/***/ function(module, exports) {
+    /******************************/
+    module.exports = {
+            "title": "OIE-Auth0 user update webhook",
+            "name": "oie-auth0-user-update-webhook",
+            "version": "1.0.5",
+            "author": "OIEngine",
+            "description": "Web hook for updating user profile on OIE side",
+            "type": "cron",
+            "logoUrl": "https://cdn.auth0.com/extensions/auth0-webhooks/assets/logo.svg",
+            "repository": "https://github.com/oiengine/oie-auth0-user-update-webhook",
+            "keywords": [
+              "auth0",
+              "extension"
+            ],
+            "schedule": "0 */1 * * * *",
+            "auth0": {
+              "scopes": "read:logs read:users"
+            },
+            "secrets": {
+              "BATCH_SIZE": {
+                "description": "The ammount of logs to be read on each execution. Maximun is 100.",
+                "default": 100
+              },
+              "AUTH0_API_ENDPOINTS": {
+                "description": "Allows you to filter specific API endpoints, comma separated.",
+                "example": "e.g.: users, connections, rules, logs, emails, stats, clients, tenants",
+                "default": "users"
+              },
+              "UPDATE_USER_WEBHOOK_URL":     {
+                "required": true
+              },
+              "DELETE_USER_WEBHOOK_URL":     {
+                "required": true
+              },
+              "WEBHOOK_CONCURRENT_CALLS":     {
+                "description": "The maximum concurrent calls that will be made to your webhook",
+                "default": 1
+              },
+              "AUTH0_APP_CLIENT_SECRET":     {
+                "description": "Secret id of application, it is used to create a JWT token",
+                "required": true
+              },
+              "AUTH0_APP_CLIENT_ID":     {
+                "description": "Client id of application, it is used in filtering the logs, only logs from this application will be processed",
+                "required": true
+              }
+            }
+          };
+    /******************************/
+ 
 /***/ }
+
 /******/ ]);
