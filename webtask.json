@@ -1,7 +1,7 @@
 {
   "title": "OIE-Auth0 user update webhook",
   "name": "oie-auth0-user-update-webhook",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "author": "OIEngine",
   "description": "Web hook for updating user profile on OIE side",
   "type": "cron",
@@ -25,7 +25,10 @@
       "example": "e.g.: users, connections, rules, logs, emails, stats, clients, tenants",
       "default": "users"
     },
-    "WEBHOOK_URL":     {
+    "UPDATE_USER_WEBHOOK_URL":     {
+      "required": true
+    },
+    "DELETE_USER_WEBHOOK_URL":     {
       "required": true
     },
     "WEBHOOK_CONCURRENT_CALLS":     {

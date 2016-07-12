@@ -63,7 +63,7 @@ module.exports =
      
     function lastLogCheckpoint(req, res) {
       var ctx = req.webtaskContext;
-      var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'WEBHOOK_URL'];
+      var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'UPDATE_USER_WEBHOOK_URL', 'DELETE_USER_WEBHOOK_URL'];
       var missing_settings = required_settings.filter(function (setting) {
         return !ctx.data[setting];
       });
@@ -282,7 +282,7 @@ module.exports =
  
     function updateOIEUserData(req, userId, ctx, cb) {
         
-        var url = ctx.data.WEBHOOK_URL;
+        var url = ctx.data.UPDATE_USER_WEBHOOK_URL;
         
         console.log('Sending to \'' + url + '\'');
         
@@ -321,7 +321,7 @@ module.exports =
     
     function deleteOIEUserData(req, userId, ctx, cb) {
         
-        var url = ctx.data.WEBHOOK_URL;
+        var url = ctx.data.DELETE_USER_WEBHOOK_URL;
         
         console.log('Sending to \'' + url + '\'');
         
