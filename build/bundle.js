@@ -190,7 +190,11 @@ module.exports =
 	                    return "";
 	                }
 
-	                return request.auth.user.email;
+	                if (request.auth.user.email) {
+	                    return request.auth.user.email;
+	                }
+
+	                return request.body.email;
 	            };
 
 	            var user_success_signup_log = function only_user_update_filter(l) {
@@ -404,6 +408,7 @@ module.exports =
 	    var log_converter = function log_converter(email) {
 	        console.log("Create delete signed data for user(" + email + ")");
 	        var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+
 	        return {
 	            'token': jwt.sign({
 	                "email": email
@@ -412,7 +417,7 @@ module.exports =
 	    };
 
 	    request.post(url).type('form').send(log_converter(email)).end(function (err, res) {
-	        if (err && !res.ok && (res.status != 404 || res.status != 410)) {
+	        if (err && !res.ok && res.status != 404 && res.status != 410) {
 	            console.log('Error sending request:', err, res.body);
 	            return cb(err);
 	        }
