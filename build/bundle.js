@@ -75,17 +75,21 @@ module.exports =
 
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-	var express = __webpack_require__(44);
-	var auth0 = __webpack_require__(45);
+	var auth0 = __webpack_require__(44);
 	var Webtask = __webpack_require__(1);
-	var app = express();
-	var metadata = __webpack_require__(46);
-	var request = __webpack_require__(47);
-	var async = __webpack_require__(48);
-	var express = __webpack_require__(44);
-	var Request = __webpack_require__(47);
+	var metadata = __webpack_require__(45);
+	var request = __webpack_require__(46);
+	var async = __webpack_require__(47);
+	var express = __webpack_require__(48);
+	var Request = __webpack_require__(46);
 	var memoizer = __webpack_require__(49);
 	var jwt = __webpack_require__(52);
+	var app = express();
+
+	app.use(auth0({
+	    createClient: false,
+	    scopes: 'read:logs read:users'
+	}));
 
 	function lastLogCheckpoint(req, res) {
 	    var ctx = req.webtaskContext;
@@ -1080,22 +1084,16 @@ module.exports =
 /* 44 */
 /***/ function(module, exports) {
 
-	module.exports = require("express");
+	module.exports = require("auth0-oauth2-express");
 
 /***/ },
 /* 45 */
 /***/ function(module, exports) {
 
-	module.exports = require("auth0-oauth2-express");
-
-/***/ },
-/* 46 */
-/***/ function(module, exports) {
-
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
 		"name": "oie-auth0-user-update-webhook",
-		"version": "1.2.0",
+		"version": "1.4.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
@@ -1106,9 +1104,6 @@ module.exports =
 			"extension"
 		],
 		"schedule": "0 */1 * * * *",
-		"auth0": {
-			"scopes": "read:logs read:users"
-		},
 		"secrets": {
 			"BATCH_SIZE": {
 				"description": "The ammount of logs to be read on each execution. Maximun is 100.",
@@ -1144,16 +1139,22 @@ module.exports =
 	};
 
 /***/ },
-/* 47 */
+/* 46 */
 /***/ function(module, exports) {
 
 	module.exports = require("superagent");
 
 /***/ },
-/* 48 */
+/* 47 */
 /***/ function(module, exports) {
 
 	module.exports = require("async");
+
+/***/ },
+/* 48 */
+/***/ function(module, exports) {
+
+	module.exports = require("express");
 
 /***/ },
 /* 49 */
