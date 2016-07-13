@@ -13,6 +13,7 @@
   ],
   "schedule": "0 */1 * * * *",
   "auth0": {
+    "createClient": false,
     "scopes": "read:logs read:users"
   },
   "secrets": {
