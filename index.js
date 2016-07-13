@@ -309,9 +309,10 @@ function updateOIEUserData(req, userId, ctx, cb) {
     };
 
     getUserDataFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.access_token, userId, function(userResponse, err) {
-        if (err) {
-            console.log('Error getting user data from Auth0', err);
-            return callback(err);
+
+        if (!userResponse) {
+            console.log('User data is not found by ', userId);
+            return cb();
         }
 
         request.post(url).type('form').send(log_converter(userResponse)).end(function(err, res) {
@@ -390,7 +391,10 @@ function getLogsFromAuth0(domain, client_id, token, take, from, cb) {
 }
 
 function getUserDataFromAuth0(domain, token, userId, cb) {
-    var url = 'https://' + domain + '/api/v2/users/' + encodeURI(userId);
+    
+    var startWithAuth0 = userId.indexOf("|") != -1;
+    
+    var url = 'https://' + domain + '/api/v2/users/' + encodeURI(startWithAuth0 ? userId : "auth0|" + userId);
 
     Request.get(url).set('Authorization', 'Bearer ' + token).set('Accept', 'application/json').end(function(err, res) {
         if (err || !res.ok) {
