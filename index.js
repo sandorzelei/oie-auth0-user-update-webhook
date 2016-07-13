@@ -9,11 +9,6 @@ var memoizer = require('lru-memoizer');
 var jwt = require('jsonwebtoken');
 var app = express();
 
-app.use(auth0({
-  createClient: true,
-  scopes: 'read:logs read:users'
-}));
-
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
     var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID' ];

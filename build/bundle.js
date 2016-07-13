@@ -86,11 +86,6 @@ module.exports =
 	var jwt = __webpack_require__(52);
 	var app = express();
 
-	app.use(auth0({
-	    createClient: true,
-	    scopes: 'read:logs read:users'
-	}));
-
 	function lastLogCheckpoint(req, res) {
 	    var ctx = req.webtaskContext;
 	    var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID'];
@@ -1093,7 +1088,7 @@ module.exports =
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
 		"name": "oie-auth0-user-update-webhook",
-		"version": "1.5.0",
+		"version": "1.6.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
@@ -1103,6 +1098,9 @@ module.exports =
 			"auth0",
 			"extension"
 		],
+		"auth0": {
+			"scopes": "read:logs read:users"
+		},
 		"schedule": "0 */1 * * * *",
 		"secrets": {
 			"BATCH_SIZE": {
