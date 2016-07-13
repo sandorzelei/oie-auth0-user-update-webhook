@@ -12,7 +12,7 @@ var jwt = require('jsonwebtoken');
 
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
-    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'UPDATE_USER_WEBHOOK_URL', 'DELETE_USER_WEBHOOK_URL' ];
+    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID' ];
     var missing_settings = required_settings.filter(function(setting) {
         return !ctx.data[setting];
     });
@@ -85,13 +85,17 @@ function lastLogCheckpoint(req, res) {
 
             /** *************************** */
             var user_update_log = function only_user_update_filter(l) {
-
+                
                 var request = l.details.request;
 
-                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
+                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1 || !ctx.data.UPDATE_USER_WEBHOOK_URL) {
                     return false;
                 }
 
+                if(!ctx.data.UPDATE_USER_WEBHOOK_URL) {
+                    return;
+                }
+                
                 var userUrl = request.path;
                 return decodeURI(userUrl.replace(USER_API_URL, ""));
             };
@@ -104,6 +108,10 @@ function lastLogCheckpoint(req, res) {
                     return false;
                 }
 
+                if(!ctx.data.DELETE_USER_WEBHOOK_URL) {
+                    return;
+                }
+                
                 var userUrl = request.path;
                 return decodeURI(userUrl.replace(USER_API_URL, ""));
             };
@@ -129,6 +137,10 @@ function lastLogCheckpoint(req, res) {
                     return;
                 }
 
+                if(!ctx.data.SIGN_UP_USER_WEBHOOK_URL) {
+                    return;
+                }
+                
                 return l.details.request.user_id;
             };
 
@@ -284,12 +296,7 @@ function lastLogCheckpoint(req, res) {
 
 function updateOIEUserData(req, userId, ctx, cb) {
 
-    var url = ctx.data.UPDATE_USER_WEBHOOK_URL;
-
-    if (!url) {
-        console.log("Update url it not defined, notification is skipped");
-        return cb();
-    }
+    var url = ctx.data.UPDATE_USER_WEBHOOK_URL || ctx.data.SIGN_UP_USER_WEBHOOK_URL;
 
     console.log('Sending to \'' + url + '\'');
 
@@ -327,11 +334,6 @@ function updateOIEUserData(req, userId, ctx, cb) {
 function deleteOIEUserData(req, email, ctx, cb) {
 
     var url = ctx.data.DELETE_USER_WEBHOOK_URL;
-
-    if (!url) {
-        console.log("Delete url it not defined, notification is skipped");
-        return cb();
-    }
 
     console.log('Sending to \'' + url + '\'');
 
