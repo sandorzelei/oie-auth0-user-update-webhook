@@ -103,9 +103,9 @@ module.exports =
 		req.webtaskContext.storage.get(function (err, data) {
 			if (err && err.output.statusCode !== 404) return res.status(err.code).send(err);
 
-			console.log("Data checkpointId", data.checkpointId);
-
 			var startCheckpointId = typeof data === 'undefined' ? null : data.checkpointId;
+
+			console.log("Data checkpointId", startCheckpointId);
 
 			// Start the process.
 			async.waterfall([function (callback) {
