@@ -1,7 +1,5 @@
-var express = require('express');
 var auth0 = require('auth0-oauth2-express');
 var Webtask = require('webtask-tools');
-var app = express();
 var metadata = require('./webtask.json');
 var request = require('superagent');
 var async = require('async');
@@ -9,6 +7,7 @@ var express = require('express');
 var Request = require('superagent');
 var memoizer = require('lru-memoizer');
 var jwt = require('jsonwebtoken');
+var app = express();
 
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
