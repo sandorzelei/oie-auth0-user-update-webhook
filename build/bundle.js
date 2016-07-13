@@ -78,6 +78,8 @@ module.exports =
       req.webtaskContext.storage.get(function (err, data) {
         if (err && err.output.statusCode !== 404) return res.status(err.code).send(err);
  
+        console.log("Data checkpointId", data.checkpointId);
+        
         var startCheckpointId = typeof data === 'undefined' ? null : data.checkpointId;
  
         // Start the process.
@@ -151,6 +153,17 @@ module.exports =
               return decodeURI(userUrl.replace(USER_API_URL, ""));
           };
           
+          var user_email = function only_user_update_filter(l) {
+              
+              var request = l.details.request;
+              
+              if(!request || request.method != "delete" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
+                  return "";
+              }
+              
+              return request.auth.user.email;
+          };
+          
           var user_success_signup_log = function only_user_update_filter(l) {
               
               if(l.details.request.type != "ss") {
@@ -171,11 +184,13 @@ module.exports =
           .map(function (l) {
             var userUpdateId = user_update_log(l) || user_success_signup_log(l);
             var userDeleteId = user_delete_log(l);
+            var userEmail = user_email(l);
             
             return {
               date: l.date,
               type: userDeleteId ? "delete" : "update",
-              userId: userDeleteId || userUpdateId 
+              userId: userDeleteId || userUpdateId,
+              email: userEmail
             };
           });
           
@@ -207,7 +222,7 @@ module.exports =
                 var key = item.type;
                 
                 if(!acc[key] || acc[key].date < item.date) {
-                    acc[key] = item.date;  
+                    acc[key] = {date: item.date, email: item.email};  
                 } 
                 
                 return acc;
@@ -223,21 +238,30 @@ module.exports =
             
             console.log("Log:", logs[userId]);
             
-            var deleteActionDate = logs[userId]["delete"];
-            var updateActionDate = logs[userId]["update"];
+            var deleteAction = logs[userId]["delete"];
+            var updateAction = logs[userId]["update"];
+            
+            var deleteActionDate = deleteAction && deleteAction.date;
+            var updateActionDate = updateAction && updateAction.date;
            
+            var email = deleteAction && deleteAction.email;
+            
+            console.log("Email:", email);
+            console.log("DeleteActionDate:", deleteActionDate);
+            console.log("UpdateActionDate:", updateActionDate);
+            
             if(updateActionDate && !deleteActionDate) {
                 console.log("User(" + userId + ") profile is updated")
                 updateOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
             } else if(!updateActionDate && deleteActionDate) {
-                console.log("User(" + userId + ") profile is removed")
-                deleteOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+                console.log("User(" + email + ") profile is removed")
+                deleteOIEUserData(req, email, ctx, function (err) {err ? cb(err) : cb();});
             } else if(updateActionDate > deleteActionDate) {
                 console.log("User(" + userId + ") profile is removed, but signed up again")
                 updateOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
             } else if(updateActionDate < deleteActionDate) {
-                console.log("User(" + userId + ") profile is updated, but also removed")
-                deleteOIEUserData(req, userId, ctx, function (err) {err ? cb(err) : cb();});
+                console.log("User(" + email + ") profile is updated, but also removed")
+                deleteOIEUserData(req, email, ctx, function (err) {err ? cb(err) : cb();});
             }
 
           }, function (err) {
@@ -307,7 +331,11 @@ module.exports =
                     console.log('Error sending request:', err, JSON.stringify(res.body));
                     return cb(err);
                 }
-                  
+               
+                if(res.status == 404) {
+                    console.log('Resource is not found');
+                }
+                
                 return cb();
             });
 
@@ -315,27 +343,31 @@ module.exports =
         
     }
     
-    function deleteOIEUserData(req, userId, ctx, cb) {
+    function deleteOIEUserData(req, email, ctx, cb) {
         
         var url = ctx.data.DELETE_USER_WEBHOOK_URL;
         
         console.log('Sending to \'' + url + '\'');
         
-        var log_converter = function log_converter(userId) {
-            console.log("Create delete signed data for user(" + userId + ")");
+        var log_converter = function log_converter(email) {
+            console.log("Create delete signed data for user(" + email + ")");
             var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
-            return {'token' : jwt.sign({"userId" : userId}, secret)};
+            return {'token' : jwt.sign({"email" : email}, secret)};
         };
         
         request.post(url)
         .type('form')
-        .send(log_converter(userId))
+        .send(log_converter(email))
         .end(function (err, res) {
             if (err && !res.ok && res.status != 404) {
                 console.log('Error sending request:', err, JSON.stringify(res.body));
                 return cb(err);
             }
-              
+            
+            if(res.status == 404) {
+                console.log('Resource is not found');
+            }
+            
             return cb();
          });
 
