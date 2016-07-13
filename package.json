@@ -1,6 +1,6 @@
 {
   "name": "oie-auth0-user-update-webhook",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "description": "Web hook for updating user profile on OIE side",
   "main": "index.js",
   "scripts": {

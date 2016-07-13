@@ -1032,17 +1032,51 @@ module.exports =
 /***/ function(module, exports) {
 
 	module.exports = {
-		"title": "Auth0 Extension Boilerplate",
-		"name": "auth0-extension-boilerplate",
-		"version": "1.0.0",
-		"author": "auth0",
-		"description": "This is a Hello World extension",
-		"type": "application",
-		"repository": "https://github.com/auth0/auth0-extension-boilerplate",
+		"title": "OIE-Auth0 user update webhook",
+		"name": "oie-auth0-user-update-webhook",
+		"version": "1.1.0",
+		"author": "OIEngine",
+		"description": "Web hook for updating user profile on OIE side",
+		"type": "cron",
+		"logoUrl": "https://cdn.auth0.com/extensions/auth0-webhooks/assets/logo.svg",
+		"repository": "https://github.com/oiengine/oie-auth0-user-update-webhook",
 		"keywords": [
 			"auth0",
 			"extension"
-		]
+		],
+		"schedule": "0 */1 * * * *",
+		"auth0": {
+			"scopes": "read:logs read:users"
+		},
+		"secrets": {
+			"BATCH_SIZE": {
+				"description": "The ammount of logs to be read on each execution. Maximun is 100.",
+				"default": 100
+			},
+			"AUTH0_API_ENDPOINTS": {
+				"description": "Allows you to filter specific API endpoints, comma separated.",
+				"example": "e.g.: users, connections, rules, logs, emails, stats, clients, tenants",
+				"default": "users"
+			},
+			"UPDATE_USER_WEBHOOK_URL": {
+				"required": false
+			},
+			"DELETE_USER_WEBHOOK_URL": {
+				"required": false
+			},
+			"WEBHOOK_CONCURRENT_CALLS": {
+				"description": "The maximum concurrent calls that will be made to your webhook",
+				"default": 1
+			},
+			"AUTH0_APP_CLIENT_SECRET": {
+				"description": "Secret id of application, it is used to create a JWT token",
+				"required": true
+			},
+			"AUTH0_APP_CLIENT_ID": {
+				"description": "Client id of application, it is used in filtering the logs, only logs from this application will be processed",
+				"required": true
+			}
+		}
 	};
 
 /***/ }
