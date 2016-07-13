@@ -87,7 +87,7 @@ module.exports =
 	var app = express();
 
 	app.use(auth0({
-	    createClient: false,
+	    createClient: true,
 	    scopes: 'read:logs read:users'
 	}));
 
