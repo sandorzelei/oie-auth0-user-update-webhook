@@ -80,6 +80,12 @@ module.exports =
 	var Webtask = __webpack_require__(1);
 	var app = express();
 	var metadata = __webpack_require__(46);
+	var request = __webpack_require__(47);
+	var async = __webpack_require__(48);
+	var express = __webpack_require__(44);
+	var Request = __webpack_require__(47);
+	var memoizer = __webpack_require__(49);
+	var jwt = __webpack_require__(52);
 
 	function lastLogCheckpoint(req, res) {
 		var ctx = req.webtaskContext;
@@ -1078,6 +1084,152 @@ module.exports =
 			}
 		}
 	};
+
+/***/ },
+/* 47 */
+/***/ function(module, exports) {
+
+	module.exports = require("superagent");
+
+/***/ },
+/* 48 */
+/***/ function(module, exports) {
+
+	module.exports = require("async");
+
+/***/ },
+/* 49 */
+/***/ function(module, exports, __webpack_require__) {
+
+	const LRU        = __webpack_require__(50);
+	const _          = __webpack_require__(51);
+	const lru_params = [ 'max', 'maxAge', 'length', 'dispose', 'stale' ];
+
+	module.exports = function (options) {
+	  const cache   = new LRU(_.pick(options, lru_params));
+	  const load    = options.load;
+	  const hash    = options.hash;
+	  const bypass  = options.bypass;
+	  const loading  = new Map();
+
+	  if (options.disable) {
+	    return load;
+	  }
+
+	  const result = function () {
+	    const args       = _.toArray(arguments);
+	    const parameters = args.slice(0, -1);
+	    const callback   = args.slice(-1).pop();
+	    const self       = this;
+
+	    var key;
+
+	    if (bypass && bypass.apply(self, parameters)) {
+	      return load.apply(self, args);
+	    }
+
+	    if (parameters.length === 0 && !hash) {
+	      //the load function only receives callback.
+	      key = '_';
+	    } else {
+	      key = hash.apply(self, parameters);
+	    }
+
+	    var fromCache = cache.get(key);
+
+	    if (fromCache) {
+	      return callback.apply(null, [null].concat(fromCache));
+	    }
+
+	    if (!loading.get(key)) {
+	      loading.set(key, []);
+
+	      load.apply(self, parameters.concat(function (err) {
+	        const args = _.toArray(arguments);
+
+	        //we store the result only if the load didn't fail.
+	        if (!err) {
+	          cache.set(key, args.slice(1));
+	        }
+
+	        //immediately call every other callback waiting
+	        loading.get(key).forEach(function (callback) {
+	          callback.apply(null, args);
+	        });
+
+	        loading.delete(key);
+	        /////////
+
+	        callback.apply(null, args);
+	      }));
+	    } else {
+	      loading.get(key).push(callback);
+	    }
+	  };
+
+	  result.keys = cache.keys.bind(cache);
+
+	  return result;
+	};
+
+
+	module.exports.sync = function (options) {
+	  const cache = new LRU(_.pick(options, lru_params));
+	  const load = options.load;
+	  const hash = options.hash;
+	  const disable = options.disable;
+	  const bypass = options.bypass;
+	  const self = this;
+
+	  if (disable) {
+	    return load;
+	  }
+
+	  const result = function () {
+	    var args = _.toArray(arguments);
+
+	    if (bypass && bypass.apply(self, arguments)) {
+	      return load.apply(self, arguments);
+	    }
+
+	    var key = hash.apply(self, args);
+
+	    var fromCache = cache.get(key);
+
+	    if (fromCache) {
+	      return fromCache;
+	    }
+
+	    var result = load.apply(self, args);
+
+	    cache.set(key, result);
+
+	    return result;
+	  };
+
+	  result.keys = cache.keys.bind(cache);
+
+	  return result;
+	};
+
+
+/***/ },
+/* 50 */
+/***/ function(module, exports) {
+
+	module.exports = require("lru-cache");
+
+/***/ },
+/* 51 */
+/***/ function(module, exports) {
+
+	module.exports = require("lodash");
+
+/***/ },
+/* 52 */
+/***/ function(module, exports) {
+
+	module.exports = require("jsonwebtoken");
 
 /***/ }
 /******/ ]);
