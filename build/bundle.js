@@ -1093,7 +1093,7 @@ module.exports =
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
 		"name": "oie-auth0-user-update-webhook",
-		"version": "1.4.0",
+		"version": "1.5.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
