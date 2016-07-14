@@ -11,7 +11,7 @@ var app = express();
 
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
-    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN' ];
+    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN' ];
     var missing_settings = required_settings.filter(function(setting) {
         return !ctx.data[setting];
     });

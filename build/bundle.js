@@ -88,7 +88,7 @@ module.exports =
 
 	function lastLogCheckpoint(req, res) {
 	    var ctx = req.webtaskContext;
-	    var required_settings = ['AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN'];
+	    var required_settings = ['AUTH0_DOMAIN', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN'];
 	    var missing_settings = required_settings.filter(function (setting) {
 	        return !ctx.data[setting];
 	    });
@@ -1048,8 +1048,8 @@ module.exports =
 
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
-		"name": "oie-auth0-user-webhook",
-		"version": "1.7.0",
+		"name": "oie-auth0-user-webhook-1-8",
+		"version": "1.8.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
