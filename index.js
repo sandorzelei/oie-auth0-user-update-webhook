@@ -11,7 +11,7 @@ var app = express();
 
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
-    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID' ];
+    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_CLIENT_ID', 'AUTH0_CLIENT_SECRET', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN' ];
     var missing_settings = required_settings.filter(function(setting) {
         return !ctx.data[setting];
     });
@@ -44,7 +44,7 @@ function lastLogCheckpoint(req, res) {
 
                 context.logs = context.logs || [];
 
-                getLogsFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.webtaskContext.data.AUTH0_APP_CLIENT_ID, req.access_token, take, context.checkpointId, function(logs, err) {
+                getLogsFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.webtaskContext.data.AUTH0_APP_CLIENT_ID, req.webtaskContext.data.AUTH0_TOKEN, take, context.checkpointId, function(logs, err) {
                     if (err) {
                         console.log('Error getting logs from Auth0', err);
                         return callback(err);
@@ -307,7 +307,7 @@ function updateOIEUserData(req, userId, ctx, cb) {
         };
     };
 
-    getUserDataFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.access_token, userId, function(userResponse, err) {
+    getUserDataFromAuth0(req.webtaskContext.data.AUTH0_DOMAIN, req.webtaskContext.data.AUTH0_TOKEN, userId, function(userResponse, err) {
 
         if (!userResponse) {
             console.log('User data is not found by ', userId);
@@ -404,45 +404,6 @@ function getUserDataFromAuth0(domain, token, userId, cb) {
         }
     });
 }
-
-var getTokenCached = memoizer({
-    load : function load(apiUrl, audience, clientId, clientSecret, cb) {
-        Request.post(apiUrl).send({
-            audience : audience,
-            grant_type : 'client_credentials',
-            client_id : clientId,
-            client_secret : clientSecret
-        }).type('application/json').end(function(err, res) {
-            if (err || !res.ok) {
-                cb(null, err);
-            } else {
-                cb(res.body.access_token);
-            }
-        });
-    },
-    hash : function hash(apiUrl) {
-        return apiUrl;
-    },
-    max : 100,
-    maxAge : 1000 * 60 * 60
-});
-
-app.use(function(req, res, next) {
-    var apiUrl = 'https://' + req.webtaskContext.data.AUTH0_DOMAIN + '/oauth/token';
-    var audience = 'https://' + req.webtaskContext.data.AUTH0_DOMAIN + '/api/v2/';
-    var clientId = req.webtaskContext.data.AUTH0_CLIENT_ID;
-    var clientSecret = req.webtaskContext.data.AUTH0_CLIENT_SECRET;
-
-    getTokenCached(apiUrl, audience, clientId, clientSecret, function(access_token, err) {
-        if (err) {
-            console.log('Error getting access_token', err);
-            return next(err);
-        }
-
-        req.access_token = access_token;
-        next();
-    });
-});
 
 app.get('/', lastLogCheckpoint);
 app.post('/', lastLogCheckpoint);
