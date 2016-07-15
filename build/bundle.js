@@ -450,9 +450,7 @@ module.exports =
 	            console.log('Error getting logs', err);
 	            cb(null, err);
 	        } else {
-	            console.log('x-ratelimit-limit: ', res.headers['x-ratelimit-limit']);
-	            console.log('x-ratelimit-remaining: ', res.headers['x-ratelimit-remaining']);
-	            console.log('x-ratelimit-reset: ', res.headers['x-ratelimit-reset']);
+	            console.log('x-ratelimit-limit: ', res.headers['x-ratelimit-limit'], 'x-ratelimit-remaining: ', res.headers['x-ratelimit-remaining'], 'x-ratelimit-reset: ', res.headers['x-ratelimit-reset']);
 	            cb(res.body);
 	        }
 	    });
@@ -1048,8 +1046,8 @@ module.exports =
 
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
-		"name": "oie-auth0-user-webhook-1-8",
-		"version": "1.8.0",
+		"name": "oie-auth0-user-webhook-1-9",
+		"version": "1.9.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
@@ -1059,7 +1057,6 @@ module.exports =
 			"auth0",
 			"extension"
 		],
-		"schedule": "0 */1 * * * *",
 		"secrets": {
 			"BATCH_SIZE": {
 				"description": "The ammount of logs to be read on each execution. Maximun is 100.",

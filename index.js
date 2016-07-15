@@ -381,9 +381,7 @@ function getLogsFromAuth0(domain, client_id, token, take, from, cb) {
             console.log('Error getting logs', err);
             cb(null, err);
         } else {
-            console.log('x-ratelimit-limit: ', res.headers['x-ratelimit-limit']);
-            console.log('x-ratelimit-remaining: ', res.headers['x-ratelimit-remaining']);
-            console.log('x-ratelimit-reset: ', res.headers['x-ratelimit-reset']);
+            console.log('x-ratelimit-limit: ', res.headers['x-ratelimit-limit'], 'x-ratelimit-remaining: ', res.headers['x-ratelimit-remaining'], 'x-ratelimit-reset: ', res.headers['x-ratelimit-reset']);
             cb(res.body);
         }
     });

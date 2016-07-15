@@ -1,7 +1,7 @@
 {
   "title": "OIE-Auth0 user update webhook",
-  "name": "oie-auth0-user-webhook-1-8",
-  "version": "1.8.0",
+  "name": "oie-auth0-user-webhook-1-9",
+  "version": "1.9.0",
   "author": "OIEngine",
   "description": "Web hook for updating user profile on OIE side",
   "type": "cron",
@@ -11,7 +11,6 @@
     "auth0",
     "extension"
   ],
-  "schedule": "0 */1 * * * *",
   "secrets": {
     "BATCH_SIZE": {
       "description": "The ammount of logs to be read on each execution. Maximun is 100.",
