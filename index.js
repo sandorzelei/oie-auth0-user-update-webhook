@@ -154,8 +154,13 @@ function lastLogCheckpoint(req, res) {
 
             /** *************************** */
 
+
+            var fromDate = new Date(new Date() - 5 * 60000);
+            
             context.logs = context.logs.filter(function(l) {
                 return l.type === 'sapi' || l.type === 'fapi' || l.type === 'ss';
+            }).filter(function(l) {
+                return new Date(l.date) > fromDate;
             }).filter(function(l) {
                 return user_update_log(l) || user_success_signup_log(l) || user_delete_log(l);
             }).map(function(l) {
