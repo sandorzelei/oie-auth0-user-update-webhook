@@ -11,7 +11,7 @@ var app = express();
 
 function lastLogCheckpoint(req, res) {
     var ctx = req.webtaskContext;
-    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN' ];
+    var required_settings = [ 'AUTH0_DOMAIN', 'AUTH0_TARGET_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN' ];
     var missing_settings = required_settings.filter(function(setting) {
         return !ctx.data[setting];
     });
@@ -23,6 +23,8 @@ function lastLogCheckpoint(req, res) {
         });
     }
 
+    console.log(" ******* OIE Webhook ******* ");
+    
     // If this is a scheduled task, we'll get the last log checkpoint from the
     // previous run and continue from there.
     req.webtaskContext.storage.get(function(err, data) {
@@ -83,11 +85,11 @@ function lastLogCheckpoint(req, res) {
             var USER_API_URL = "/api/v2/users/";
 
             /** *************************** */
-            var user_update_log = function only_user_update_filter(l) {
+            var user_update_log = function user_update_log(l) {
                 
                 var request = l.details.request;
 
-                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1 || !ctx.data.UPDATE_USER_WEBHOOK_URL) {
+                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
                     return false;
                 }
 
@@ -99,7 +101,7 @@ function lastLogCheckpoint(req, res) {
                 return decodeURI(userUrl.replace(USER_API_URL, ""));
             };
 
-            var user_delete_log = function only_user_update_filter(l) {
+            var user_delete_log = function user_delete_log(l) {
 
                 var request = l.details.request;
 
@@ -115,7 +117,7 @@ function lastLogCheckpoint(req, res) {
                 return decodeURI(userUrl.replace(USER_API_URL, ""));
             };
 
-            var user_email = function only_user_update_filter(l) {
+            var user_email = function user_email(l) {
 
                 var request = l.details.request;
 
@@ -130,23 +132,30 @@ function lastLogCheckpoint(req, res) {
                 return request.body.email;
             };
 
-            var user_success_signup_log = function only_user_update_filter(l) {
-
-                if (l.details.request.type != "ss") {
-                    return;
-                }
-
-                if(!ctx.data.SIGN_UP_USER_WEBHOOK_URL) {
-                    return;
-                }
+            var user_success_signup_log = function user_success_signup_log(l) {
                 
-                return l.details.request.user_id;
+                try {
+                    var type = l.type || l.details.request.type;
+                    
+                    if (type != "ss") {
+                        return;
+                    }
+    
+                    if(!ctx.data.SIGN_UP_USER_WEBHOOK_URL) {
+                        return;
+                    }
+                    
+                    return  l.user_id || l.details.request.user_id;
+                } catch (e) {
+                    console.log(e, l);
+                    return false;
+                }
             };
 
             /** *************************** */
 
             context.logs = context.logs.filter(function(l) {
-                return l.type === 'sapi' || l.type === 'fapi';
+                return l.type === 'sapi' || l.type === 'fapi' || l.type === 'ss';
             }).filter(function(l) {
                 return user_update_log(l) || user_success_signup_log(l) || user_delete_log(l);
             }).map(function(l) {
@@ -301,7 +310,7 @@ function updateOIEUserData(req, userId, ctx, cb) {
 
     var log_converter = function log_converter(userResponse) {
         console.log("Create signed data for user(" + userResponse.user_metadata.userId + "), auth0 userId: " + userResponse.user_id)
-        var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+        var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
         return {
             'token' : jwt.sign(userResponse, secret)
         };
@@ -339,11 +348,13 @@ function deleteOIEUserData(req, email, ctx, cb) {
 
     var log_converter = function log_converter(email) {
         console.log("Create delete signed data for user(" + email + ")");
-        var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+        var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
         
         return {
             'token' : jwt.sign({
-                "email" : email
+                "email" : email,
+                "iss": "OIE",
+                "aud": ctx.data.AUTH0_TARGET_APP_CLIENT_ID
             }, secret)
         };
     };

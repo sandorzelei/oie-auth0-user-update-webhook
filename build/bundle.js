@@ -88,7 +88,7 @@ module.exports =
 
 	function lastLogCheckpoint(req, res) {
 	    var ctx = req.webtaskContext;
-	    var required_settings = ['AUTH0_DOMAIN', 'AUTH0_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN'];
+	    var required_settings = ['AUTH0_DOMAIN', 'AUTH0_TARGET_APP_CLIENT_SECRET', 'AUTH0_APP_CLIENT_ID', 'AUTH0_TOKEN'];
 	    var missing_settings = required_settings.filter(function (setting) {
 	        return !ctx.data[setting];
 	    });
@@ -99,6 +99,8 @@ module.exports =
 	            message: 'Missing settings: ' + missing_settings.join(', ')
 	        });
 	    }
+
+	    console.log(" ******* OIE Webhook ******* ");
 
 	    // If this is a scheduled task, we'll get the last log checkpoint from the
 	    // previous run and continue from there.
@@ -157,11 +159,11 @@ module.exports =
 	            var USER_API_URL = "/api/v2/users/";
 
 	            /** *************************** */
-	            var user_update_log = function only_user_update_filter(l) {
+	            var user_update_log = function user_update_log(l) {
 
 	                var request = l.details.request;
 
-	                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1 || !ctx.data.UPDATE_USER_WEBHOOK_URL) {
+	                if (!request || request.method != "patch" || !request.path || request.path.indexOf(USER_API_URL) == -1) {
 	                    return false;
 	                }
 
@@ -173,7 +175,7 @@ module.exports =
 	                return decodeURI(userUrl.replace(USER_API_URL, ""));
 	            };
 
-	            var user_delete_log = function only_user_update_filter(l) {
+	            var user_delete_log = function user_delete_log(l) {
 
 	                var request = l.details.request;
 
@@ -189,7 +191,7 @@ module.exports =
 	                return decodeURI(userUrl.replace(USER_API_URL, ""));
 	            };
 
-	            var user_email = function only_user_update_filter(l) {
+	            var user_email = function user_email(l) {
 
 	                var request = l.details.request;
 
@@ -204,23 +206,30 @@ module.exports =
 	                return request.body.email;
 	            };
 
-	            var user_success_signup_log = function only_user_update_filter(l) {
+	            var user_success_signup_log = function user_success_signup_log(l) {
 
-	                if (l.details.request.type != "ss") {
-	                    return;
+	                try {
+	                    var type = l.type || l.details.request.type;
+
+	                    if (type != "ss") {
+	                        return;
+	                    }
+
+	                    if (!ctx.data.SIGN_UP_USER_WEBHOOK_URL) {
+	                        return;
+	                    }
+
+	                    return l.user_id || l.details.request.user_id;
+	                } catch (e) {
+	                    console.log(e, l);
+	                    return false;
 	                }
-
-	                if (!ctx.data.SIGN_UP_USER_WEBHOOK_URL) {
-	                    return;
-	                }
-
-	                return l.details.request.user_id;
 	            };
 
 	            /** *************************** */
 
 	            context.logs = context.logs.filter(function (l) {
-	                return l.type === 'sapi' || l.type === 'fapi';
+	                return l.type === 'sapi' || l.type === 'fapi' || l.type === 'ss';
 	            }).filter(function (l) {
 	                return user_update_log(l) || user_success_signup_log(l) || user_delete_log(l);
 	            }).map(function (l) {
@@ -373,7 +382,7 @@ module.exports =
 
 	    var log_converter = function log_converter(userResponse) {
 	        console.log("Create signed data for user(" + userResponse.user_metadata.userId + "), auth0 userId: " + userResponse.user_id);
-	        var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+	        var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
 	        return {
 	            'token': jwt.sign(userResponse, secret)
 	        };
@@ -409,11 +418,13 @@ module.exports =
 
 	    var log_converter = function log_converter(email) {
 	        console.log("Create delete signed data for user(" + email + ")");
-	        var secret = new Buffer(ctx.data.AUTH0_APP_CLIENT_SECRET, 'base64').toString('binary');
+	        var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
 
 	        return {
 	            'token': jwt.sign({
-	                "email": email
+	                "email": email,
+	                "iss": "OIE",
+	                "aud": ctx.data.AUTH0_TARGET_APP_CLIENT_ID
 	            }, secret)
 	        };
 	    };
@@ -1046,8 +1057,8 @@ module.exports =
 
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
-		"name": "oie-auth0-user-webhook-1-10",
-		"version": "1.10.0",
+		"name": "oie-auth0-user-webhook-1-11",
+		"version": "1.11.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
@@ -1081,13 +1092,17 @@ module.exports =
 				"description": "The maximum concurrent calls that will be made to your webhook",
 				"default": 1
 			},
-			"AUTH0_APP_CLIENT_SECRET": {
-				"description": "Secret id of application, it is used to create a JWT token",
-				"required": true
-			},
 			"AUTH0_APP_CLIENT_ID": {
 				"description": "Client id of application, it is used in filtering the logs, only logs from this application will be processed",
 				"required": true
+			},
+			"AUTH0_TARGET_APP_CLIENT_SECRET": {
+				"description": "Secret id of application, it is used to create a JWT token",
+				"required": true
+			},
+			"AUTH0_TARGET_APP_CLIENT_ID": {
+				"description": "Client id of application, it is used to create a JWT token",
+				"required": false
 			},
 			"AUTH0_TOKEN": {
 				"description": "Security token with read:logs, read:users",
