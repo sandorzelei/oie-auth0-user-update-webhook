@@ -199,11 +199,11 @@ module.exports =
 	                    return "";
 	                }
 
-	                if (request.auth.user.email) {
-	                    return request.auth.user.email;
+	                if (request.body) {
+	                    return request.body.email;
 	                }
 
-	                return request.body.email;
+	                return;
 	            };
 
 	            var user_success_signup_log = function user_success_signup_log(l) {
@@ -417,6 +417,11 @@ module.exports =
 	function deleteOIEUserData(req, email, ctx, cb) {
 
 	    var url = ctx.data.DELETE_USER_WEBHOOK_URL;
+
+	    if (!email) {
+	        console.log('Email is empty, delete request cannot build without email');
+	        return cb();
+	    }
 
 	    console.log('Sending to \'' + url + '\'');
 
@@ -1061,8 +1066,8 @@ module.exports =
 
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
-		"name": "oie-auth0-user-webhook-1-12",
-		"version": "1.12.0",
+		"name": "oie-auth0-user-webhook-1-13",
+		"version": "1.13.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",

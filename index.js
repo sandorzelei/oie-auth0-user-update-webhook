@@ -125,11 +125,11 @@ function lastLogCheckpoint(req, res) {
                     return "";
                 }
 
-                if (request.auth.user.email) {
-                    return request.auth.user.email;
+                if (request.body) {
+                    return request.body.email;
                 }
 
-                return request.body.email;
+                return;
             };
 
             var user_success_signup_log = function user_success_signup_log(l) {
@@ -349,6 +349,11 @@ function deleteOIEUserData(req, email, ctx, cb) {
 
     var url = ctx.data.DELETE_USER_WEBHOOK_URL;
 
+    if(!email) {
+        console.log('Email is empty, delete request cannot build without email');
+        return cb();
+    }
+    
     console.log('Sending to \'' + url + '\'');
 
     var log_converter = function log_converter(email) {
