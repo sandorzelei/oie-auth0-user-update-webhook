@@ -1,7 +1,7 @@
 {
   "title": "OIE-Auth0 user update webhook",
-  "name": "oie-auth0-user-webhook-1-13",
-  "version": "1.13.0",
+  "name": "oie-auth0-user-webhook-1-14",
+  "version": "1.14.0",
   "author": "OIEngine",
   "description": "Web hook for updating user profile on OIE side",
   "type": "cron",

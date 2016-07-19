@@ -316,6 +316,10 @@ function updateOIEUserData(req, userId, ctx, cb) {
     var log_converter = function log_converter(userResponse) {
         console.log("Create signed data for user(" + userResponse.user_metadata.userId + "), auth0 userId: " + userResponse.user_id)
         var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
+        
+        userResponse.iss = "OIE";
+        userResponse.aud = ctx.data.AUTH0_TARGET_APP_CLIENT_ID;
+        
         return {
             'token' : jwt.sign(userResponse, secret)
         };
@@ -331,7 +335,7 @@ function updateOIEUserData(req, userId, ctx, cb) {
         request.post(url).type('form').send(log_converter(userResponse)).end(function(err, res) {
             if (err && !res.ok && res.status != 404) {
                 console.log('Error sending request:', err, res.body);
-                return cb(err);
+                return cb();
             }
 
             if (res.status == 404) {
@@ -372,7 +376,7 @@ function deleteOIEUserData(req, email, ctx, cb) {
     request.post(url).type('form').send(log_converter(email)).end(function(err, res) {
         if (err && !res.ok && res.status != 404 && res.status != 410) {
             console.log('Error sending request:', err, res.body);
-            return cb(err);
+            return cb();
         }
 
         if (res.status == 404) {

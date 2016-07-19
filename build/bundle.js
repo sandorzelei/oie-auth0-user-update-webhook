@@ -387,6 +387,10 @@ module.exports =
 	    var log_converter = function log_converter(userResponse) {
 	        console.log("Create signed data for user(" + userResponse.user_metadata.userId + "), auth0 userId: " + userResponse.user_id);
 	        var secret = new Buffer(ctx.data.AUTH0_TARGET_APP_CLIENT_SECRET, 'base64').toString('binary');
+
+	        userResponse.iss = "OIE";
+	        userResponse.aud = ctx.data.AUTH0_TARGET_APP_CLIENT_ID;
+
 	        return {
 	            'token': jwt.sign(userResponse, secret)
 	        };
@@ -402,7 +406,7 @@ module.exports =
 	        request.post(url).type('form').send(log_converter(userResponse)).end(function (err, res) {
 	            if (err && !res.ok && res.status != 404) {
 	                console.log('Error sending request:', err, res.body);
-	                return cb(err);
+	                return cb();
 	            }
 
 	            if (res.status == 404) {
@@ -441,7 +445,7 @@ module.exports =
 	    request.post(url).type('form').send(log_converter(email)).end(function (err, res) {
 	        if (err && !res.ok && res.status != 404 && res.status != 410) {
 	            console.log('Error sending request:', err, res.body);
-	            return cb(err);
+	            return cb();
 	        }
 
 	        if (res.status == 404) {
@@ -1066,8 +1070,8 @@ module.exports =
 
 	module.exports = {
 		"title": "OIE-Auth0 user update webhook",
-		"name": "oie-auth0-user-webhook-1-13",
-		"version": "1.13.0",
+		"name": "oie-auth0-user-webhook-1-14",
+		"version": "1.14.0",
 		"author": "OIEngine",
 		"description": "Web hook for updating user profile on OIE side",
 		"type": "cron",
